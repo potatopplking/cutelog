@@ -3,10 +3,10 @@ from datetime import datetime
 from functools import partial
 
 from qtpy.QtCore import (QAbstractItemModel, QAbstractTableModel, QEvent, QItemSelectionModel,
-                         QModelIndex, QSize, QSortFilterProxyModel, Qt)
+                         QModelIndex, QSize, QSortFilterProxyModel, QTimer, Qt)
 from qtpy.QtGui import QBrush, QColor, QFont
 from qtpy.QtWidgets import (QCheckBox, QHBoxLayout, QMenu, QShortcut, QStyle,
-                            QTableWidgetItem, QWidget)
+                            QTableWidgetItem, QWidget, QAbstractItemView)
 
 from .config import CONFIG, Exc_Indication
 from .level_edit_dialog import LevelEditDialog
@@ -1040,7 +1040,15 @@ class LoggerTab(QWidget):
         # resizeRowsToContents is very slow, so it's best to try to do it only when necessary
         if resize_rows and (self.extra_mode or self.word_wrap):
             self.loggerTable.resizeRowsToContents()
-        if self.autoscroll:
+        selected = self.loggerTable.selectionModel().currentIndex()
+        if selected.row() > 0: # -1 if nothing selected
+            # scrollTo needs to be called twice, once immediately
+            # and once with some minimal delay. Not sure why
+            def scroll_to_selected():
+                self.loggerTable.scrollTo(selected, QAbstractItemView.PositionAtCenter)
+            scroll_to_selected()
+            QTimer.singleShot(0, scroll_to_selected)
+        elif self.autoscroll:
             self.loggerTable.scrollToBottom()
 
     def onScroll(self, pos):
